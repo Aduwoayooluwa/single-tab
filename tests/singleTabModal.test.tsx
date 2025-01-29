@@ -1,6 +1,8 @@
 import React from "react";
 import { render, fireEvent } from "@testing-library/react";
 import SingleTabModal from "../src/component/singleTabModal";
+import "@testing-library/jest-dom";
+
 
 describe("<SingleTabModal />", () => {
   it("should not render when isOpen is false", () => {
@@ -35,6 +37,7 @@ describe("<SingleTabModal />", () => {
       />
     );
 
+  
     // Check the outer container's style
     const overlay = container.firstChild; // Outer overlay div
     expect(overlay).toHaveStyle("background-color: red");

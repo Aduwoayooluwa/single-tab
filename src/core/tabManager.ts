@@ -42,10 +42,17 @@ export const createTabManager = (appId: string, onDuplicate?: () => void) => {
    * @param message - The message containing the type and sender tabId.
    */
   const handleMessage = (message: { type: string; tabId: string }) => {
-    if (message.type === "NEW_TAB" && message.tabId !== tabId && onDuplicate) {
-      onDuplicate(); // Trigger callback when a duplicate tab is detected
+    if (message.type === "NEW_TAB" && message.tabId !== tabId) {
+      // Send a message back to the duplicate tab, telling it to restrict itself
+      if (channel) {
+        channel.postMessage({ type: "DUPLICATE_WARNING", tabId: message.tabId });
+      }
+    } else if (message.type === "DUPLICATE_WARNING" && message.tabId === tabId && onDuplicate) {
+      // Only the duplicate tab (Tab B) should trigger onDuplicate
+      onDuplicate();
     }
   };
+  
 
   /**
    * Syncs the current tab with sessionStorage to detect duplicate tabs.
@@ -89,15 +96,25 @@ export const createTabManager = (appId: string, onDuplicate?: () => void) => {
    */
   const registerTab = () => {
     if (channel) {
-      // Notify other tabs via BroadcastChannel
+      // Notify other tabs that a new tab has opened
       channel.postMessage({ type: "NEW_TAB", tabId });
-    } else {
-      // Update the active tabs list in sessionStorage
+  
+      // Check if there are already active tabs, meaning this is a duplicate
       const activeTabs = getActiveTabs();
+      if (activeTabs.length > 0) {
+        // Send a self-message to restrict this tab
+        channel.postMessage({ type: "DUPLICATE_WARNING", tabId });
+      }
+    } else {
+      const activeTabs = getActiveTabs();
+      if (activeTabs.length > 0 && onDuplicate) {
+        onDuplicate(); // Restrict this tab only
+      }
       activeTabs.push(tabId);
       updateActiveTabs(activeTabs);
     }
   };
+  
 
   /**
    * Unregisters the current tab by notifying other tabs and cleaning up storage.
